@@ -304,3 +304,19 @@ func presentationContent(tx *sql.Tx, id, startTime string) (string, error) {
 	out, err := json.Marshal(c)
 	return string(out), err
 }
+
+// Delete marks a presentation as deleted, the way Proclaim does it. Proclaim
+// uploads the deletion on its next start, and the presentation disappears
+// from every computer in the group.
+func (d *DB) Delete(p Presentation, now time.Time) error {
+	res, err := d.sql.Exec(`UPDATE Presentations SET Modified = ?, ModifiedUtc = ?, IsDeleted = 1, SyncState = ?
+		WHERE PresentationId = ? AND IsDeleted = 0`,
+		now.Local().Format(time.RFC3339), now.UTC().Format(time.RFC3339), syncChanged, p.ID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return fmt.Errorf("presentation %s not found", p.ID)
+	}
+	return nil
+}

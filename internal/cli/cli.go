@@ -86,6 +86,7 @@ var commands = []command{
 	{"show", "show <presentation> [--json]", "Show a presentation's order of items", (*App).show},
 	{"find", "find <text> [--kind <kind>] [--json]", "Find items to reuse, such as songs, across all presentations", (*App).find},
 	{"apply", "apply <plan.json|-> [--yes]", "Preview a plan, and write it with --yes", (*App).apply},
+	{"delete", "delete <presentation> [--yes]", "Delete a presentation on every computer, with --yes", (*App).delete},
 	{"install-skill", "install-skill [--path <dir>]", "Install the agent skill to ~/.claude/skills", (*App).installSkill},
 }
 

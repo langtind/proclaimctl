@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/langtind/proclaimctl/internal/plan"
 	"github.com/langtind/proclaimctl/internal/proclaim"
@@ -130,7 +131,7 @@ func (a *App) apply(ctx context.Context, args []string) error {
 	}
 
 	stamp := now.Format("20060102-150405")
-	backup, err := db.Backup(a.BackupDir, "PresentationManager-"+stamp+".db")
+	backup, err := db.Backup(a.BackupDir, backupName(now))
 	if err != nil {
 		return err
 	}
@@ -162,4 +163,46 @@ func readPlan(path string) (plan.Plan, error) {
 		r = f
 	}
 	return plan.Parse(r)
+}
+
+func backupName(now time.Time) string {
+	return "PresentationManager-" + now.Format("20060102-150405") + ".db"
+}
+
+func (a *App) delete(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("delete", flag.ContinueOnError)
+	yes := fs.Bool("yes", false, "delete it, not just show what would be deleted")
+	positional, err := parseArgs(fs, args, 1, "one presentation id or title, quoted if it has spaces")
+	if err != nil {
+		return err
+	}
+	if *yes && a.ProclaimRunning() {
+		return errors.New("Proclaim is running. Quit it first: it keeps the presentation in memory and would overwrite the change")
+	}
+	db, err := a.openDB(!*yes)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	p, err := db.FindPresentation(positional[0])
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(a.Stdout, "# Delete %s\ndate: %s\nid: %s\n", p.Title, p.Date, p.ID)
+	if !*yes {
+		fmt.Fprintln(a.Stdout, "\nPreview only. Run again with --yes to delete it on every computer, with Proclaim closed.")
+		return nil
+	}
+
+	now := a.Now()
+	backup, err := db.Backup(a.BackupDir, backupName(now))
+	if err != nil {
+		return err
+	}
+	if err := db.Delete(p, now); err != nil {
+		return fmt.Errorf("%w (nothing was written, backup at %s)", err, backup)
+	}
+	fmt.Fprintf(a.Stdout, "\nDeleted.\nBackup: %s\nStart Proclaim. It uploads the deletion within a minute.\n", backup)
+	return nil
 }

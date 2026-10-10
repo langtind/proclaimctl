@@ -411,3 +411,24 @@ func TestShowAndFind(t *testing.T) {
 		t.Errorf("find = %v", uses)
 	}
 }
+
+func TestDelete(t *testing.T) {
+	db := fixture(t)
+	r := runApp(t, db, false, "delete", "12 April")
+	if r.code != exitOK || !strings.Contains(r.stdout, "Preview only") {
+		t.Fatalf("preview: exit %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	if r := runApp(t, db, true, "delete", "12 April", "--yes"); r.code != exitError {
+		t.Fatalf("delete while Proclaim runs: exit %d", r.code)
+	}
+	if r := runApp(t, db, false, "delete", "12 April", "--yes"); r.code != exitOK {
+		t.Fatalf("delete: exit %d: %s", r.code, r.stderr)
+	}
+	r = runApp(t, db, false, "show", "12 April")
+	if r.code != exitError || !strings.Contains(r.stderr, "no presentation matches") {
+		t.Errorf("a deleted presentation must not be found: exit %d, stderr %q", r.code, r.stderr)
+	}
+	if got := presentationRow(t, db, "PresentationId = 'next'")["state"]; got != 1 {
+		t.Errorf("SyncState = %v, want 1 so Proclaim uploads the deletion", got)
+	}
+}

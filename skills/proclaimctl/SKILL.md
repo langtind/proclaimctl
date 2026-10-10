@@ -64,6 +64,15 @@ A plan for a presentation that exists:
 
 A new presentation copied from an old one takes `"from"`, `"title"` and `"date"` in place of `"presentation"`.
 
+## Delete a presentation
+
+```bash
+proclaimctl delete "<id or title>"        # preview
+proclaimctl delete "<id or title>" --yes  # with Proclaim closed
+```
+
+The deletion reaches every computer in the group. Delete only what the user named.
+
 ## Safety
 
 - `apply` without `--yes` only previews. Always preview first.

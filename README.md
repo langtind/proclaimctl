@@ -93,6 +93,15 @@ proclaimctl apply plan.json --yes
 
 proclaimctl refuses to write while Proclaim runs, because Proclaim would overwrite the change. Before each write it copies the database to `~/Library/Application Support/proclaimctl/backups/` on macOS, or the matching folder on Windows. Start Proclaim afterwards. It uploads the presentation within a minute, and Bible passages fill in from your licensed Bible when they are shown. A video plays from the local file until Proclaim has uploaded it. Then Proclaim swaps in the uploaded copy and syncs again, so leave the file in place until that is done. macOS may ask whether Proclaim can read the folder the video is in. Allow it.
 
+### Delete a presentation
+
+```bash
+proclaimctl delete "Service 12 April"        # preview
+proclaimctl delete "Service 12 April" --yes  # with Proclaim closed
+```
+
+The presentation disappears from every computer in your group when Proclaim starts and syncs.
+
 ## Agent skill
 
 proclaimctl carries a skill that teaches an agent how to use it.
