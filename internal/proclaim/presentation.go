@@ -43,6 +43,9 @@ type Item struct {
 	Title      string   `json:"title"`
 	Section    Section  `json:"section"`
 	References []string `json:"references,omitempty"`
+	// Uploading is true while a video or image on the item waits for
+	// Proclaim to upload it.
+	Uploading bool `json:"uploading,omitempty"`
 
 	PresentationID string `json:"-"`
 	row            itemRow
@@ -148,6 +151,7 @@ func itemFromRow(r itemRow) Item {
 		Kind:           r.Kind,
 		Title:          r.Title,
 		References:     bibleReferences(r.Content.String),
+		Uploading:      pendingUploads(r.Content.String),
 		PresentationID: r.PresentationID,
 		row:            r,
 	}
@@ -315,4 +319,22 @@ func bibleReferences(content string) []string {
 		}
 	}
 	return out
+}
+
+// pendingUploads reports whether the item lists upload jobs that have not
+// completed. Proclaim removes a job from UploadJobIds when it completes.
+func pendingUploads(content string) bool {
+	if !strings.Contains(content, `"UploadJobIds"`) {
+		return false
+	}
+	var c map[string]json.RawMessage
+	if json.Unmarshal([]byte(content), &c) != nil {
+		return false
+	}
+	var encoded string
+	if json.Unmarshal(c["UploadJobIds"], &encoded) != nil {
+		return false
+	}
+	var ids []string
+	return json.Unmarshal([]byte(encoded), &ids) == nil && len(ids) > 0
 }

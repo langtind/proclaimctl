@@ -44,7 +44,7 @@ proclaimctl apply plan.json
 proclaimctl apply plan.json --yes
 ```
 
-7. Ask the user to start Proclaim and open the presentation. It uploads the change within a minute. Bible text fills in from the church's Bible when the item is shown. A video is uploaded to the church's media library, which can take a few minutes. If macOS asks whether Proclaim may read the video's folder, the user must allow it. Keep the video file in place until the upload is done.
+7. Ask the user to start Proclaim and open the presentation. Run `show` until it no longer says `Changed locally` or `is not uploaded yet`. Then the presentation is on every computer. It uploads the change within a minute. Bible text fills in from the church's Bible when the item is shown. A video is uploaded to the church's media library, which can take a few minutes. If macOS asks whether Proclaim may read the video's folder, the user must allow it. Keep the video file in place until the upload is done.
 
 A plan for a presentation that exists:
 

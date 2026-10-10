@@ -38,6 +38,11 @@ func renderPresentation(w io.Writer, p proclaim.Presentation, items []proclaim.I
 	if !p.Synced {
 		fmt.Fprintln(w, "Changed locally, not uploaded yet.")
 	}
+	for _, it := range items {
+		if it.Uploading {
+			fmt.Fprintf(w, "Media on %q is not uploaded yet.\n", it.Title)
+		}
+	}
 	bySection := map[proclaim.Section][]proclaim.Item{}
 	for _, it := range items {
 		bySection[it.Section] = append(bySection[it.Section], it)
@@ -64,6 +69,9 @@ func describe(it proclaim.Item) string {
 	s := it.Title + " [" + it.Kind + "]"
 	if len(it.References) > 0 {
 		s += " " + strings.Join(it.References, "; ")
+	}
+	if it.Uploading {
+		s += " (uploading)"
 	}
 	return s
 }

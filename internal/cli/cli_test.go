@@ -328,6 +328,11 @@ func TestApplyQueuesVideoUpload(t *testing.T) {
 		}
 	}
 
+	r = runApp(t, db, false, "show", "next")
+	if !strings.Contains(r.stdout, `Media on "Mission week" is not uploaded yet.`) || !strings.Contains(r.stdout, "Changed locally") {
+		t.Errorf("show must say the presentation is not done:\n%s", r.stdout)
+	}
+
 	backups, _ := filepath.Glob(filepath.Join(filepath.Dir(db), "backups", "UploadManager-*.db"))
 	if len(backups) != 1 {
 		t.Errorf("upload queue backups = %v", backups)
