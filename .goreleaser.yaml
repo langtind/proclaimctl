@@ -1,0 +1,90 @@
+version: 2
+
+project_name: proclaimctl
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: proclaimctl
+    main: .
+    binary: proclaimctl
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+    targets:
+      - darwin_amd64
+      - darwin_arm64
+      - linux_amd64
+      - linux_arm64
+      - windows_amd64
+      - windows_arm64
+
+archives:
+  - ids:
+      - proclaimctl
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: "Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Refactoring"
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "Docs"
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: "Tests"
+      regexp: '^.*?test(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: "Build, chore and CI"
+      regexp: '^.*?(build|chore|ci)(\([[:word:]]+\))??!?:.+$'
+      order: 5
+    - title: "Other changes"
+      order: 999
+  filters:
+    exclude:
+      - "^Merge pull request"
+      - "^Merge branch"
+
+homebrew_casks:
+  - name: proclaimctl
+    repository:
+      owner: langtind
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Casks
+    homepage: "https://github.com/langtind/proclaimctl"
+    description: "Unofficial CLI for reading and building Faithlife Proclaim presentations"
+    license: "MIT"
+    binaries:
+      - proclaimctl
+    hooks:
+      post:
+        # The binaries are not notarized, so Gatekeeper blocks them unless the
+        # quarantine flag Homebrew sets on cask downloads is removed.
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/proclaimctl"]
+          end

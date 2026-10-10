@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-commit hook for proclaimctl - formats Go code before commit
+
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$')
+
+if [ -z "$STAGED_GO_FILES" ]; then
+    exit 0
+fi
+
+echo "Formatting Go files..."
+gofmt -w $STAGED_GO_FILES
+git add $STAGED_GO_FILES
+
+echo "Running go vet..."
+go vet ./...
+if [ $? -ne 0 ]; then
+    echo "go vet failed"
+    exit 1
+fi
+
+exit 0

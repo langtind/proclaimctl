@@ -1,0 +1,49 @@
+# Build artifacts
+/proclaimctl
+*.exe
+*.test
+*.out
+dist/
+build/
+
+# Go workspace file
+go.work
+
+# Local configuration and secrets
+.env
+.env.local
+.env.*.local
+config.toml
+auth.json
+profile/
+
+# Captured traffic holds tokens and other people's data
+*.har
+*.proxymansession
+.playwright-cli/
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+._*
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Proclaim databases and backups hold a church's presentations
+*.db
+*.db-journal
+backups/
+decomp/
