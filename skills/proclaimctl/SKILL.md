@@ -74,6 +74,10 @@ proclaimctl delete "<id or title>" --yes  # with Proclaim closed
 
 The deletion reaches every computer in the group. Delete only what the user named.
 
+## Follow the service live
+
+`proclaimctl remote watch --log <file>` writes one JSON line per slide change while a presentation is on air: time, item, title, kind, slide index, video state. It needs Proclaim's local server (Settings, Remote, Local server) and only reads.
+
 ## Safety
 
 - `apply` without `--yes` only previews. Always preview first.

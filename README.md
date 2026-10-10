@@ -108,6 +108,16 @@ proclaimctl delete "Service 12 April" --yes  # with Proclaim closed
 
 The presentation disappears from every computer in your group when Proclaim starts and syncs.
 
+## Follow the service live
+
+`remote watch` logs every slide change while a presentation is on air, one JSON line per event with a timestamp. It waits through off-air periods, so you can start it before the service.
+
+```bash
+proclaimctl remote watch --log service.jsonl
+```
+
+Turn on Proclaim's local server first: Settings, Remote, Local server. proclaimctl only reads what is on screen. It does not control Proclaim.
+
 ## Agent skill
 
 proclaimctl carries a skill that teaches an agent how to use it.
