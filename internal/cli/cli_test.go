@@ -432,3 +432,21 @@ func TestDelete(t *testing.T) {
 		t.Errorf("SyncState = %v, want 1 so Proclaim uploads the deletion", got)
 	}
 }
+
+func TestReplaceEverywhere(t *testing.T) {
+	db := fixture(t)
+	plan := `{"presentation": "next", "replace": {"bible study": {"4 October": "18 October"}}}`
+	if r := runApp(t, db, false, "apply", writePlan(t, plan), "--yes"); r.code != exitOK {
+		t.Fatalf("exit %d: %s", r.code, r.stderr)
+	}
+	got := items(t, db, "next")
+	if len(got) != 5 || !strings.Contains(got[3].content, "Bible study 18 October") {
+		t.Errorf("items = %+v", got)
+	}
+
+	plan = `{"presentation": "next", "replace": {"Bible study": {"1 January": "2 January"}}}`
+	r := runApp(t, db, false, "apply", writePlan(t, plan))
+	if r.code != exitError || !strings.Contains(r.stderr, `text "1 January" not found`) {
+		t.Errorf("missing text: exit %d, stderr %q", r.code, r.stderr)
+	}
+}

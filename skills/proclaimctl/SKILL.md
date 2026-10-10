@@ -30,6 +30,7 @@ The order of service usually comes as an email or a document from the service le
    - A video file the user has, such as a mission film: `{"video": "<absolute path>"}`. Download it first if it is a link.
    - A fixed item already in the presentation, such as the creed, the Lord's Prayer, the giving slide or recording cues: `{"keep": "<title or id>"}`. Use the id when two items share a title.
    - Text that must change, such as a date on an announcement: add `"replace": {"old": "new"}` to the step.
+   - Dates on announcement slides, often in the pre-service and post-service loops: a top-level `"replace": {"<item title>": {"old": "new"}}` changes every item with that title in any section. Run `show` on the base and check each announcement for a date that has passed.
 3. Leave out what the order of service drops. A section you list holds only the steps you give it. A section you leave out is kept as it is.
 4. Write the plan to a file and preview it.
 

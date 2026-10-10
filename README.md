@@ -71,6 +71,12 @@ A plan lists the items of a section in order. Each step does one thing.
 }
 ```
 
+To change text on an item wherever it is, such as a date on an announcement in the loops, use a top-level `replace` keyed by item title. Clones show their original, so they change too.
+
+```json
+{"presentation": "Service 12 April", "replace": {"Next service": {"12 April": "26 April"}}}
+```
+
 The sections are `pre_service`, `warm_up`, `service` and `post_service`. A section you leave out keeps its items. A section you list contains only the items you list.
 
 To start a new presentation from an old one, use `from` and a `title` in place of `presentation`.

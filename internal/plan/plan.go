@@ -28,6 +28,11 @@ type Plan struct {
 	Date      string `json:"date,omitempty"`
 	StartTime string `json:"start_time,omitempty"`
 
+	// Replace changes slide text on every item with a given title, in any
+	// section, such as dates on announcements in the loops: title to old
+	// text to new text. Clones show their original, so they follow along.
+	Replace map[string]map[string]string `json:"replace,omitempty"`
+
 	PreService  *[]Step `json:"pre_service,omitempty"`
 	WarmUp      *[]Step `json:"warm_up,omitempty"`
 	Service     *[]Step `json:"service,omitempty"`
@@ -199,7 +204,42 @@ func (p Plan) Resolve(src Source, now time.Time) (proclaim.Change, error) {
 		}
 		change.Items[section] = items
 	}
+	if err := p.replaceEverywhere(change, now); err != nil {
+		return proclaim.Change{}, err
+	}
 	return change, nil
+}
+
+// replaceEverywhere applies the plan's top-level replacements. Every title
+// must match an item, and every text must be found on at least one of them.
+func (p Plan) replaceEverywhere(change proclaim.Change, now time.Time) error {
+	for title, pairs := range p.Replace {
+		matched := false
+		for old, repl := range pairs {
+			found := 0
+			for _, section := range proclaim.Sections {
+				for i, it := range change.Items[section] {
+					if !strings.EqualFold(it.Title, title) || it.Kind == "Clone" {
+						continue
+					}
+					matched = true
+					updated, n, err := it.ReplaceText(old, repl, now)
+					if err != nil {
+						return err
+					}
+					change.Items[section][i] = updated
+					found += n
+				}
+			}
+			if !matched {
+				return fmt.Errorf("replace: no item titled %q in the presentation", title)
+			}
+			if found == 0 {
+				return fmt.Errorf("replace: text %q not found on %q", old, title)
+			}
+		}
+	}
+	return nil
 }
 
 func resolveStep(src Source, s Step, base []proclaim.Item, used []bool,
