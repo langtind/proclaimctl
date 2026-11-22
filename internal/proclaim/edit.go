@@ -31,18 +31,32 @@ func (it Item) Copy(now time.Time) Item {
 	return itemFromRow(r)
 }
 
-// WithBibleReference points an OnScreenBible item at a new passage. The
-// cached passage text is cleared, and Proclaim fetches the text from the
-// licensed Bible the next time the item is shown.
+// WithBibleReference points an OnScreenBible item at new passages. Several
+// passages are separated by semicolons, as in "Isaiah 57:14–16; Revelation
+// 20:11–13", and each becomes its own passage, as Proclaim stores them.
+// The cached passage text is cleared, and Proclaim fetches the text from
+// the licensed Bible the next time the item is shown.
 func (it Item) WithBibleReference(reference string, now time.Time) (Item, error) {
 	if it.Kind != "OnScreenBible" {
 		return Item{}, fmt.Errorf("%q is a %s item, not an OnScreenBible item", it.Title, it.Kind)
 	}
+	var passages []string
+	for _, p := range strings.Split(reference, ";") {
+		if p = strings.TrimSpace(p); p != "" {
+			passages = append(passages, p)
+		}
+	}
+	if len(passages) == 0 {
+		return Item{}, errors.New("the Bible reference must not be empty")
+	}
 	err := it.editContent(now, func(c map[string]json.RawMessage) error {
-		refs, err := json.Marshal([]map[string]string{
-			{"reference": reference, "searchText": reference, "syncStatus": "noError"},
-			{"syncStatus": "noError"},
-		})
+		entries := make([]map[string]string, 0, len(passages)+1)
+		for _, p := range passages {
+			entries = append(entries, map[string]string{"reference": p, "searchText": p, "syncStatus": "noError"})
+		}
+		// Proclaim keeps an empty entry last for the next passage to add.
+		entries = append(entries, map[string]string{"syncStatus": "noError"})
+		refs, err := json.Marshal(entries)
 		if err != nil {
 			return err
 		}
@@ -66,7 +80,7 @@ func (it Item) WithBibleReference(reference string, now time.Time) (Item, error)
 	if err != nil {
 		return Item{}, err
 	}
-	it.References = []string{reference}
+	it.References = passages
 	return it, nil
 }
 
