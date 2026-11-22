@@ -119,7 +119,7 @@ func (a *App) apply(ctx context.Context, args []string) error {
 	defer db.Close()
 
 	now := a.Now()
-	change, err := p.Resolve(db, now)
+	change, err := p.Resolve(db, a.RenderSlides, now)
 	if err != nil {
 		return err
 	}

@@ -14,10 +14,13 @@ import (
 // yet. The item's localfile key says which file it is.
 const localMediaID = "fcfb311c-1b42-4eae-b4b6-7f0d2b4b4860"
 
-// Upload is a video that Proclaim uploads to the church's media library the
-// next time it starts. When the upload completes, Proclaim swaps the local
-// file on the item for the uploaded media and syncs the presentation again.
+// Upload is a video or image that Proclaim uploads to the church's media
+// library the next time it starts. When the upload completes, Proclaim swaps
+// the local file on the item for the uploaded media and syncs the
+// presentation again.
 type Upload struct {
+	// Kind is "Video" or "Image", as Proclaim writes it in UploadFiles.
+	Kind          string
 	JobID         string
 	FileID        string
 	ServiceItemID string
@@ -79,6 +82,7 @@ func (it Item) AsLocalVideo(path string, now time.Time) (Item, Upload, error) {
 
 	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	up := Upload{
+		Kind:          "Video",
 		JobID:         NewID(),
 		FileID:        NewID(),
 		ServiceItemID: it.ID,
@@ -134,9 +138,13 @@ func dashed(id string) string {
 	return id[:8] + "-" + id[8:12] + "-" + id[12:16] + "-" + id[16:20] + "-" + id[20:]
 }
 
-// properties is the job file JSON Proclaim reads back at startup. With
-// needsTranscode the server makes the preview images, so none are needed here.
+// properties is the job file JSON Proclaim reads back at startup.
 func (u Upload) properties(now time.Time) (string, error) {
+	if u.Kind == "Image" {
+		return u.imageProperties(now)
+	}
+	// With needsTranscode the server makes the preview images, so none are
+	// needed here.
 	b, err := json.Marshal(map[string]any{
 		"originalPath":   u.Path,
 		"needsTranscode": true,
@@ -180,7 +188,7 @@ func queueUploads(tx *sql.Tx, uploads []Upload, groupID int64, now time.Time) er
 			return err
 		}
 		if _, err := tx.Exec(`INSERT INTO uploads.UploadFiles (UploadId, UploadFileGroupId, Kind, State, Properties)
-			VALUES (?, ?, 'Video', 0, ?)`, u.FileID, group, props); err != nil {
+			VALUES (?, ?, ?, 0, ?)`, u.FileID, group, u.Kind, props); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(`INSERT INTO ServiceItemUploadJobs (ServiceItemId, UploadJobId) VALUES (?, ?)`,

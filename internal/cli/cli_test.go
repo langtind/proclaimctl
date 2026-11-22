@@ -112,12 +112,22 @@ type run struct {
 
 func runApp(t *testing.T, dbPath string, running bool, args ...string) run {
 	t.Helper()
+	noRender := func(string) ([]string, error) {
+		t.Fatal("a test without slides must not render any")
+		return nil, nil
+	}
+	return runAppRender(t, dbPath, running, noRender, args...)
+}
+
+func runAppRender(t *testing.T, dbPath string, running bool, render func(string) ([]string, error), args ...string) run {
+	t.Helper()
 	var stdout, stderr bytes.Buffer
 	app := New(&stdout, &stderr, Build{Version: "test", Commit: "unknown", Date: "unknown"})
 	app.LocateDB = func() (string, error) { return dbPath, nil }
 	app.ProclaimRunning = func() bool { return running }
 	app.BackupDir = filepath.Join(filepath.Dir(dbPath), "backups")
 	app.Now = func() time.Time { return time.Date(2026, 4, 11, 20, 0, 0, 0, time.UTC) }
+	app.RenderSlides = render
 	code := app.Run(args)
 	return run{code, stdout.String(), stderr.String()}
 }
@@ -336,6 +346,89 @@ func TestApplyQueuesVideoUpload(t *testing.T) {
 	backups, _ := filepath.Glob(filepath.Join(filepath.Dir(db), "backups", "UploadManager-*.db"))
 	if len(backups) != 1 {
 		t.Errorf("upload queue backups = %v", backups)
+	}
+}
+
+func TestApplyAddsSlidesAsImageGroup(t *testing.T) {
+	db := fixture(t)
+	dir := t.TempDir()
+	deck := filepath.Join(dir, "Sermon.pptx")
+	var images []string
+	for _, name := range []string{"Sermon-1.png", "Sermon-2.png"} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte("png"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		images = append(images, path)
+	}
+	rendered := ""
+	render := func(path string) ([]string, error) {
+		rendered = path
+		return images, nil
+	}
+	plan := `{"presentation": "next", "service": [{"keep": "Creed"}, {"slides": ` + strconvQuote(deck) + `}]}`
+	r := runAppRender(t, db, false, render, "apply", writePlan(t, plan), "--yes")
+	if r.code != exitOK {
+		t.Fatalf("exit %d: %s", r.code, r.stderr)
+	}
+	if rendered != deck {
+		t.Errorf("rendered %q, want %q", rendered, deck)
+	}
+
+	got := items(t, db, "next")
+	var order []string
+	for _, it := range got {
+		order = append(order, it.kind+":"+it.title)
+	}
+	want := "Content:Welcome|SongLyrics:Creed|Grouping:Sermon|Content:Sermon-1|Content:Sermon-2|Grouping:Slide Group|Content:Welcome"
+	if strings.Join(order, "|") != want {
+		t.Fatalf("order = %s\nwant    %s", strings.Join(order, "|"), want)
+	}
+	section := func(it row) string {
+		var c map[string]string
+		if err := json.Unmarshal([]byte(it.content), &c); err != nil {
+			t.Fatal(err)
+		}
+		return c["CollapsibleSectionType"]
+	}
+	if section(got[2]) != "Start" || section(got[5]) != "End" {
+		t.Errorf("group bounds = %q, %q", section(got[2]), section(got[5]))
+	}
+	var slide map[string]string
+	if err := json.Unmarshal([]byte(got[3].content), &slide); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(slide["localfile:0:Sermon-1"], images[0]) || slide["UploadJobIds"] == "[]" {
+		t.Errorf("slide content = %v", slide)
+	}
+
+	up, err := sql.Open("sqlite", filepath.Join(filepath.Dir(filepath.Dir(db)), "UploadManager", "UploadManager.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer up.Close()
+	rows, err := up.Query(`SELECT j.ServiceItemId, f.Properties FROM UploadJobs j
+		JOIN UploadFileGroups g USING (UploadJobId) JOIN UploadFiles f USING (UploadFileGroupId)
+		WHERE f.Kind = 'Image' ORDER BY f.Properties`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var jobs []string
+	for rows.Next() {
+		var item, props string
+		if err := rows.Scan(&item, &props); err != nil {
+			t.Fatal(err)
+		}
+		jobs = append(jobs, item)
+		for _, want := range []string{`"needsTranscode":false`, `"category":"StillImage"`} {
+			if !strings.Contains(props, want) {
+				t.Errorf("properties lack %s: %s", want, props)
+			}
+		}
+	}
+	if len(jobs) != 2 || jobs[0] != got[3].id || jobs[1] != got[4].id {
+		t.Errorf("image uploads for %v, want %s and %s", jobs, got[3].id, got[4].id)
 	}
 }
 

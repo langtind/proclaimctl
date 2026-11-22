@@ -15,7 +15,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/langtind/proclaimctl/internal/plan"
 	"github.com/langtind/proclaimctl/internal/proclaim"
+	"github.com/langtind/proclaimctl/internal/slides"
 )
 
 const (
@@ -48,6 +50,8 @@ type App struct {
 	BackupDir string
 	// Now is the clock used for timestamps.
 	Now func() time.Time
+	// RenderSlides turns a slide deck into one image per slide.
+	RenderSlides plan.Render
 }
 
 func New(stdout, stderr io.Writer, build Build) *App {
@@ -63,6 +67,7 @@ func New(stdout, stderr io.Writer, build Build) *App {
 		ProclaimRunning: proclaim.Running,
 		BackupDir:       backups,
 		Now:             time.Now,
+		RenderSlides:    slides.Render,
 	}
 }
 

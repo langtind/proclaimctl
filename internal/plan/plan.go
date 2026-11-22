@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -39,7 +40,8 @@ type Plan struct {
 	PostService *[]Step `json:"post_service,omitempty"`
 }
 
-// Step is one item in the plan. Exactly one of Keep, Reuse, Bible and Video is set.
+// Step is one item in the plan. Exactly one of Keep, Reuse, Bible, Video
+// and Slides is set.
 type Step struct {
 	// Keep takes an item from the base presentation, by id or title.
 	Keep string `json:"keep,omitempty"`
@@ -51,6 +53,9 @@ type Step struct {
 	Bible string `json:"bible,omitempty"`
 	// Video adds a local video file, which Proclaim uploads on its next start.
 	Video string `json:"video,omitempty"`
+	// Slides adds a PowerPoint or Keynote file as a group of full-screen
+	// slides, one per slide and animation step. Keynote renders them.
+	Slides string `json:"slides,omitempty"`
 	// Replace changes slide text on the item, old text to new text.
 	Replace map[string]string `json:"replace,omitempty"`
 }
@@ -63,6 +68,8 @@ func (s Step) String() string {
 		return "reuse " + s.Reuse
 	case s.Video != "":
 		return "video " + s.Video
+	case s.Slides != "":
+		return "slides " + s.Slides
 	default:
 		return "bible " + s.Bible
 	}
@@ -106,16 +113,19 @@ func (p Plan) validate() error {
 		}
 		for i, s := range *steps {
 			set := 0
-			for _, v := range []string{s.Keep, s.Reuse, s.Bible, s.Video} {
+			for _, v := range []string{s.Keep, s.Reuse, s.Bible, s.Video, s.Slides} {
 				if v != "" {
 					set++
 				}
 			}
 			if set != 1 {
-				return fmt.Errorf("%s step %d: set exactly one of keep, reuse, bible and video", section, i+1)
+				return fmt.Errorf("%s step %d: set exactly one of keep, reuse, bible, video and slides", section, i+1)
 			}
 			if s.Kind != "" && s.Reuse == "" {
 				return fmt.Errorf("%s step %d: kind only applies to reuse", section, i+1)
+			}
+			if s.Slides != "" && len(s.Replace) > 0 {
+				return fmt.Errorf("%s step %d: replace does not apply to slides", section, i+1)
 			}
 		}
 	}
@@ -140,8 +150,12 @@ type Source interface {
 	LatestVideoTemplate() (proclaim.Item, error)
 }
 
-// Resolve looks up every step and returns the change to write.
-func (p Plan) Resolve(src Source, now time.Time) (proclaim.Change, error) {
+// Render turns a slide deck into one image file per slide, in order.
+type Render func(deck string) ([]string, error)
+
+// Resolve looks up every step and returns the change to write. render makes
+// the images for slides steps.
+func (p Plan) Resolve(src Source, render Render, now time.Time) (proclaim.Change, error) {
 	baseQuery := p.Presentation
 	if p.From != "" {
 		baseQuery = p.From
@@ -193,6 +207,20 @@ func (p Plan) Resolve(src Source, now time.Time) (proclaim.Change, error) {
 		}
 		items := []proclaim.Item{}
 		for n, s := range *steps {
+			if s.Slides != "" {
+				images, err := render(s.Slides)
+				if err != nil {
+					return proclaim.Change{}, fmt.Errorf("%s step %d (%s): %w", section, n+1, s, err)
+				}
+				title := strings.TrimSuffix(filepath.Base(s.Slides), filepath.Ext(s.Slides))
+				group, uploads, err := proclaim.SlideGroup(title, images, now)
+				if err != nil {
+					return proclaim.Change{}, fmt.Errorf("%s step %d (%s): %w", section, n+1, s, err)
+				}
+				items = append(items, group...)
+				change.Uploads = append(change.Uploads, uploads...)
+				continue
+			}
 			it, upload, err := resolveStep(src, s, baseItems, used, take, now)
 			if err != nil {
 				return proclaim.Change{}, fmt.Errorf("%s step %d (%s): %w", section, n+1, s, err)

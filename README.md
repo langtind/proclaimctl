@@ -53,8 +53,9 @@ A plan lists the items of a section in order. Each step does one thing.
 | --- | --- |
 | `{"keep": "Creed"}` | Keeps an item that is already in the presentation, by title or id |
 | `{"reuse": "Amazing Grace", "kind": "SongLyrics"}` | Copies the most recent use of an item from any presentation |
-| `{"bible": "John 11:1–7"}` | Adds an on-screen Bible passage in your church's Bible |
+| `{"bible": "John 11:1–7"}` | Adds an on-screen Bible passage in your church's Bible. Separate several passages with semicolons: `"Isaiah 57:14–16; Revelation 20:11–13"` |
 | `{"video": "/path/to/film.mp4"}` | Adds a video. Proclaim uploads it to your church's media library on its next start |
+| `{"slides": "/path/to/sermon.pptx"}` | Adds a PowerPoint or Keynote file as a group of full-screen slides, one per slide and animation step. Needs Keynote. The slides are drawn at 1920×1080 into a folder next to the file, sharper than Proclaim's own import, and uploaded like a video |
 | `"replace": {"4 October": "18 October"}` | Added to any step, changes text on the item's slides |
 
 ```json

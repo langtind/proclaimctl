@@ -26,8 +26,9 @@ The order of service usually comes as an email or a document from the service le
 1. Run `show` on the presentation for the date. If none exists, pick the most recent service as a base.
 2. Map each part that needs the screen to a step:
    - A song: `find` it, then `{"reuse": "<exact title>", "kind": "SongLyrics"}`.
-   - A Bible reading or sermon text: `{"bible": "<Book> <chapter>:<verses>"}`. Use English book names and an en dash in ranges, as Proclaim does: `John 11:1–7`, `1 John 1:9`, `Philippians 4:6–7`.
+   - A Bible reading or sermon text: `{"bible": "<Book> <chapter>:<verses>"}`. Use English book names and an en dash in ranges, as Proclaim does: `John 11:1–7`, `1 John 1:9`, `Philippians 4:6–7`. Two readings shown together go in one step, separated by a semicolon: `{"bible": "Isaiah 57:14–16; Revelation 20:11–13"}`. Each becomes its own passage in the item.
    - A video file the user has, such as a mission film: `{"video": "<absolute path>"}`. Download it first if it is a link.
+   - A speaker's PowerPoint or Keynote file: `{"slides": "<absolute path>"}`. Keynote draws every slide and animation step as a 1920×1080 image in a folder `<name> (1920x1080)` next to the file. They become a collapsible group of image slides, the same as dropping the file into Proclaim, but sharp: Proclaim's own import keeps the deck's size, often 720×405. Keep the folder until Proclaim has uploaded the images. Rendering takes a few seconds and happens on the preview too.
    - A fixed item already in the presentation, such as the creed, the Lord's Prayer, the giving slide or recording cues: `{"keep": "<title or id>"}`. Use the id when two items share a title.
    - Text that must change, such as a date on an announcement: add `"replace": {"old": "new"}` to the step.
    - Dates on announcement slides, often in the pre-service and post-service loops: a top-level `"replace": {"<item title>": {"old": "new"}}` changes every item with that title in any section. Run `show` on the base and check each announcement for a date that has passed.
